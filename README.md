@@ -25,6 +25,8 @@ Veelink is a production-grade, secure middleware gateway designed to bridge isol
 
 
 ## 📁 File Architecture
+## 📁 File Architecture
+```text
 veelink/
 ├── documents/
 │   ├── REVENUE_24eg111a18.json       # Legacy Revenue Dept database record
@@ -36,7 +38,6 @@ veelink/
 ├── server.js                        # Express backend (Auth, Vault, Consent, HMAC)
 ├── index.html                       # Enterprise frontend UI portal
 └── audit.html                       # Immutable DPDP audit ledger dashboard
-
 
 npm install express cors jsonwebtoken
 
