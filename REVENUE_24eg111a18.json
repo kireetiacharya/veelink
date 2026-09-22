@@ -1,0 +1,15 @@
+{
+  "document_header": {
+    "doc_type": "INCOME_CERTIFICATE",
+    "issuing_state": "Maharashtra",
+    "issuing_office": "Tehsildar Office, Pune",
+    "issue_date": "2025-04-10"
+  },
+  "certificate_body": {
+    "applicant_id": "24eg111a18",
+    "appl_name": "Kireeti Acharya",
+    "inc_amt": "550000",
+    "financial_year": "2024-2025",
+    "tax_status": "VERIFIED_PAID"
+  }
+}

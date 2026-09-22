@@ -1,0 +1,14 @@
+{
+  "document_header": {
+    "doc_type": "DRIVING_LICENSE",
+    "issuing_state": "Maharashtra",
+    "rto_code": "MH-12"
+  },
+  "license_body": {
+    "citizen_id": "24eg111a18",
+    "full_nm": "Kireeti Acharya",
+    "lic_no": "MH-12-2024-009182",
+    "category": "LMV_GEAR",
+    "valid_until": "2044-08-14"
+  }
+}

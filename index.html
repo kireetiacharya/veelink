@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Veelink Interoperability Gateway Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-6">
+
+  <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    
+    <!-- HEADER BAR -->
+    <div class="bg-slate-900/90 p-5 border-b border-slate-800 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+        <h1 class="font-bold text-lg text-white tracking-wide">VEELINK <span class="text-cyan-400 text-xs font-mono ml-1">GATEWAY v2.0</span></h1>
+      </div>
+      <span id="userBadge" class="hidden text-xs bg-slate-800 text-cyan-300 border border-slate-700 px-3 py-1 rounded-full font-mono"></span>
+    </div>
+
+    <div class="p-6 space-y-6">
+
+      <!-- SCREEN 1: LOGIN -->
+      <div id="loginScreen" class="space-y-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100">Citizen Identity Login</h2>
+          <p class="text-xs text-slate-400">Authenticate via Digital India / Aadhaar Portal</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-mono text-slate-400 mb-1">Citizen ID / Roll Number</label>
+            <input id="citizenIdInput" type="text" value="24eg111a18" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-slate-400 mb-1">Password</label>
+            <input id="passwordInput" type="password" value="password123" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <button onclick="handleLogin()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-lg transition text-sm">
+            Authenticate & Issue Session JWT
+          </button>
+        </div>
+      </div>
+
+      <div class="border-b border-slate-800 pb-3 flex justify-between items-end">
+          <div class="w-full pr-4">
+            <h2 class="text-lg font-bold text-slate-100 mb-2">Government Services Portal</h2>
+            <label class="block text-xs font-mono text-slate-400 mb-1">Select Service to Apply For:</label>
+            <select id="serviceSelector" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+              <option value="DRIVING_LICENSE">1. Vehicle Registration (Requires Driving License) ➔ Tests Tier 1 Hit</option>
+              <option value="INCOME_CERTIFICATE">2. Trade License (Requires Income Cert) ➔ Tests Tier 2 Fallback</option>
+            </select>
+          </div>
+          <button onclick="viewAuditLedger()" class="text-xs text-cyan-400 underline hover:text-cyan-300 whitespace-nowrap">View Audit Log</button>
+        </div>
+
+      <!-- SCREEN 2: PORTAL -->
+      <div id="portalScreen" class="hidden space-y-5">
+        <div class="border-b border-slate-800 pb-3 flex justify-between items-end">
+          <div>
+            <h2 class="text-lg font-bold text-slate-100">Municipal Services Portal</h2>
+            <p class="text-xs text-slate-400">Apply for Trade License (Requires verified Income Status)</p>
+          </div>
+          <button onclick="viewAuditLedger()" class="text-xs text-cyan-400 underline hover:text-cyan-300">View Audit Log</button>
+        </div>
+
+        <!-- MINIMIZATION TOGGLE -->
+        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs">
+          <div>
+            <span class="font-bold text-slate-200 block">DPDP Data Minimization Mode</span>
+            <span class="text-slate-500 text-[11px]">Only fetch eligibility status instead of exact income amount</span>
+          </div>
+          <input type="checkbox" id="minimizationToggle" class="w-4 h-4 accent-cyan-500 cursor-pointer">
+        </div>
+
+        <button onclick="startVerificationFlow()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-lg transition text-sm">
+          Execute Tier 1 & Tier 2 Service Pipeline
+        </button>
+
+        <!-- LIVE LOG -->
+        <div id="logBox" class="hidden p-4 bg-slate-950 rounded-lg border border-slate-800 text-xs font-mono space-y-2">
+          <p id="logDl" class="text-yellow-400">⏳ Step 1: Querying DigiLocker Vault...</p>
+          <p id="logGateway" class="text-slate-600">⏳ Step 2: Veelink Gateway Standby...</p>
+        </div>
+
+        <!-- RESULT CARD -->
+        <div id="resultBox" class="hidden p-4 bg-slate-950 border border-cyan-500/30 rounded-xl space-y-3">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold text-emerald-400">✓ DATA VERIFIED & TRANSLATED</span>
+            <span class="text-[10px] text-slate-500 font-mono" id="txMeta"></span>
+          </div>
+          <div id="payloadContainer" class="grid grid-cols-2 gap-3 text-xs"></div>
+          <div class="pt-2 border-t border-slate-800/80 space-y-1">
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>File SHA-256 Checksum:</span>
+              <span id="outFileHash" class="font-mono text-slate-300"></span>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>HMAC Payload Seal:</span>
+              <span id="outHmac" class="font-mono text-cyan-300"></span>
+            </div>
+          </div>
+          <button onclick="verifyOfficerSignature()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold py-2 rounded-lg transition mt-2">
+            🛡️ Run Officer Signature Verification
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: CONSENT -->
+  <div id="consentModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-cyan-500/40 p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-10 h-10 rounded-full bg-cyan-950 border border-cyan-500/50 mx-auto flex items-center justify-center text-cyan-400">🔒</div>
+      <h3 class="text-base font-bold text-white">DPDP Citizen Consent Required</h3>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Grant <b>Municipal Dept</b> permission to fetch verified Income record from <b>Revenue Dept</b>?
+      </p>
+      <div class="flex gap-3 pt-2">
+        <button onclick="approveConsent()" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-lg text-xs">Approve</button>
+        <button onclick="closeModal()" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded-lg text-xs">Deny</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let sessionToken = "";
+    let currentPayload = null;
+    let currentTxId = "";
+    let currentSignature = "";
+
+    async function handleLogin() {
+      const citizenId = document.getElementById('citizenIdInput').value;
+      const password = document.getElementById('passwordInput').value;
+
+      const res = await fetch('http://127.0.0.1:5000/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citizenId, password })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        sessionToken = data.session_token;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('portalScreen').classList.remove('hidden');
+        document.getElementById('userBadge').innerText = `Logged in: ${data.citizen.name}`;
+        document.getElementById('userBadge').classList.remove('hidden');
+      } else {
+        alert(data.error);
+      }
+    }
+
+    async function startVerificationFlow() {
+      // Reset UI
+      document.getElementById('logBox').classList.remove('hidden');
+      document.getElementById('resultBox').classList.add('hidden');
+      document.getElementById('consentModal').classList.add('hidden');
+      const citizenId = document.getElementById('citizenIdInput').value;
+      const docType = document.getElementById('serviceSelector').value;
+
+      document.getElementById('logDl').className = "text-yellow-400";
+      document.getElementById('logDl').innerText = `⏳ Step 1: Querying DigiLocker Vault for ${docType}...`;
+      document.getElementById('logGateway').innerText = "";
+
+      // 1. Query DigiLocker API
+      const dlRes = await fetch(`http://127.0.0.1:5000/api/v1/digilocker/vault/${citizenId}/${docType}`);
+      
+      if (dlRes.status === 200) {
+        // TIER 1 HIT: Auto-Detection Successful
+        const data = await dlRes.json();
+        document.getElementById('logDl').className = "text-emerald-400 font-bold";
+        document.getElementById('logDl').innerText = "✅ Step 1 (DigiLocker): Document FOUND! Auto-detect successful.";
+        
+        document.getElementById('resultBox').classList.remove('hidden');
+        document.getElementById('txMeta').innerText = "DIGILOCKER_NATIVE_FETCH (Tier 1)";
+        
+        const container = document.getElementById('payloadContainer');
+        container.innerHTML = "";
+        for (const [k, v] of Object.entries(data.document)) {
+          container.innerHTML += `<div><span class="text-slate-500 block uppercase text-[10px]">${k}</span><p class="font-bold text-slate-200">${v}</p></div>`;
+        }
+
+        document.getElementById('outFileHash').innerText = "N/A (DigiLocker Hosted)";
+        document.getElementById('outHmac').innerText = "N/A (DigiLocker Hosted)";
+        
+      } else if (dlRes.status === 404) {
+        // TIER 2 MISS: Trigger Veelink Fallback
+        document.getElementById('logDl').className = "text-rose-400";
+        document.getElementById('logDl').innerText = "❌ Step 1 (DigiLocker): Document NOT_FOUND in Citizen Vault";
+        document.getElementById('logGateway').className = "text-cyan-400 font-bold animate-pulse";
+        document.getElementById('logGateway').innerText = "⚡ Step 2: Triggering Veelink Fallback Gateway...";
+        
+        setTimeout(() => {
+          document.getElementById('consentModal').classList.remove('hidden');
+        }, 800);
+      }
+    }
+
+    async function approveConsent() {
+      closeModal();
+      const citizenId = document.getElementById('citizenIdInput').value;
+      const isMinimized = document.getElementById('minimizationToggle').checked;
+
+      const tokenRes = await fetch('http://127.0.0.1:5000/api/v1/auth/consent-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          citizenId, 
+          requestedDept: "REVENUE_DEPT", 
+          targetDept: "MUNICIPAL_DEPT",
+          minimizationMode: isMinimized ? "MINIMIZED" : "FULL"
+        })
+      });
+      const tokenData = await tokenRes.json();
+
+      const gatewayRes = await fetch('http://127.0.0.1:5000/api/v1/gateway/interoperability-fetch', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenData.consent_token}`
+        }
+      });
+
+      const result = await gatewayRes.json();
+      if (result.success) {
+        currentPayload = result.payload;
+        currentTxId = result.gateway_metadata.transaction_id;
+        currentSignature = result.cryptographic_proof.signature;
+
+        document.getElementById('resultBox').classList.remove('hidden');
+        document.getElementById('txMeta').innerText = `${currentTxId} (${result.gateway_metadata.data_mode})`;
+        
+        const container = document.getElementById('payloadContainer');
+        container.innerHTML = "";
+        for (const [k, v] of Object.entries(result.payload)) {
+          container.innerHTML += `<div><span class="text-slate-500 block uppercase text-[10px]">${k}</span><p class="font-bold text-slate-200">${v}</p></div>`;
+        }
+
+        document.getElementById('outFileHash').innerText = `${result.gateway_metadata.raw_file_sha256.substring(0, 16)}...`;
+        document.getElementById('outHmac').innerText = `${currentSignature.substring(0, 16)}...`;
+      }
+    }
+
+    async function verifyOfficerSignature() {
+      const res = await fetch('http://127.0.0.1:5000/api/v1/gateway/verify-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payload: currentPayload,
+          transactionId: currentTxId,
+          signatureToVerify: currentSignature
+        })
+      });
+
+      const data = await res.json();
+      alert(`Signature Verification Result:\nStatus: ${data.status}\nValid: ${data.verified}`);
+    }
+
+    async function viewAuditLedger() {
+      // Changed from the raw API endpoint to your new UI dashboard
+      window.open('/audit', '_blank');
+    }
+
+    function closeModal() {
+      document.getElementById('consentModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
